@@ -1,0 +1,317 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ChatMessage } from '../types';
+import { fileToBase64 } from '../utils/fileUtils';
+import { startChat, mockProductList } from '../services/geminiService';
+import { MicIcon, PaperclipIcon, SendIcon, LoadingSpinner } from './Icons';
+import { GoogleGenAI, LiveSession, LiveServerMessage, Modality, Blob, Chat, GenerateContentResponse } from '@google/genai';
+
+// Base64 and Audio Decoding/Encoding functions required for Live API
+const decode = (base64: string) => {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+};
+
+const encode = (bytes: Uint8Array) => {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
+
+// FIX: Explicitly type MessageBubble as a React Functional Component (React.FC)
+// This ensures TypeScript correctly handles React-specific props like `key` during list rendering.
+const MessageBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
+  const isUser = msg.role === 'user';
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+      <div className={`max-w-md p-3 rounded-2xl ${isUser ? 'bg-pink-500 text-white' : 'bg-white dark:bg-gray-700'}`}>
+        {msg.parts.map((part, index) => (
+          <div key={index}>
+            {part.text && <p className="text-sm" dangerouslySetInnerHTML={{ __html: part.text.replace(/\n/g, '<br />')}}></p>}
+            {part.image && (
+              <img
+                src={`data:${part.image.mimeType};base64,${part.image.base64}`}
+                alt="User upload"
+                className="mt-2 rounded-lg max-w-full h-auto"
+              />
+            )}
+          </div>
+        ))}
+        <span className="text-xs opacity-70 block text-right mt-1">{msg.timestamp}</span>
+      </div>
+    </div>
+  );
+};
+
+
+const SkincareChat: React.FC = () => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [image, setImage] = useState<{ file: File; base64: string; mimeType: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [chat, setChat] = useState<Chat | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const sessionPromiseRef = useRef<Promise<LiveSession> | null>(null);
+  const liveSessionRef = useRef<LiveSession | null>(null);
+  const inputAudioContextRef = useRef<AudioContext | null>(null);
+  const outputAudioContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  
+  useEffect(() => {
+    setChat(startChat());
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const base64 = await fileToBase64(file);
+      setImage({ file, base64, mimeType: file.type });
+    }
+  };
+
+  const handleSend = async () => {
+    if ((!input.trim() && !image) || isLoading || !chat) return;
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      parts: [],
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    if (input.trim()) userMessage.parts.push({ text: input });
+    if (image) userMessage.parts.push({ image: { base64: image.base64, mimeType: image.mimeType } });
+
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+    setInput('');
+    setImage(null);
+
+    try {
+      let response: GenerateContentResponse = await chat.sendMessage({ parts: userMessage.parts });
+
+      while (response.functionCalls && response.functionCalls.length > 0) {
+        const functionCalls = response.functionCalls;
+        const toolResponses = [];
+
+        for (const fc of functionCalls) {
+          if (fc.name === 'getProductList') {
+             setMessages((prev) => [...prev, { role: 'model', parts: [{ text: "একটু অপেক্ষা করুন, আমি পণ্যের তালিকা দেখছি..." }], timestamp: new Date().toLocaleTimeString() }]);
+            toolResponses.push({
+               id: fc.id,
+               name: fc.name,
+               response: { result: JSON.stringify(mockProductList) }
+            });
+          } else if (fc.name === 'createOrder') {
+            const orderArgs = fc.args;
+            console.log("Order Created:", orderArgs);
+             setMessages((prev) => [...prev, { role: 'model', parts: [{ text: `আপনার অর্ডারটি তৈরি করা হচ্ছে...` }], timestamp: new Date().toLocaleTimeString() }]);
+            toolResponses.push({
+                id: fc.id,
+                name: fc.name,
+                response: { result: "Order created successfully. Confirmation ID: 12345" }
+            });
+          }
+        }
+        
+        const subsequentResponse = await chat.sendMessage({ toolResponses: { functionResponses: toolResponses } });
+        response = subsequentResponse;
+      }
+      
+      const responseText = response.text;
+      const modelMessage: ChatMessage = {
+        role: 'model',
+        parts: [{ text: responseText }],
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      setMessages((prev) => [...prev, modelMessage]);
+    } catch (error) {
+      console.error('Error generating response:', error);
+      const errorMessage: ChatMessage = {
+        role: 'model',
+        parts: [{ text: "দুঃখিত, একটি সমস্যা হয়েছে। আবার চেষ্টা করুন।" }],
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const toggleRecording = useCallback(async () => {
+    if (isRecording) {
+      if (liveSessionRef.current) {
+        liveSessionRef.current.close();
+        liveSessionRef.current = null;
+      }
+      if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      if (scriptProcessorRef.current) scriptProcessorRef.current.disconnect();
+      if (inputAudioContextRef.current?.state !== 'closed') inputAudioContextRef.current?.close();
+      if (outputAudioContextRef.current?.state !== 'closed') outputAudioContextRef.current?.close();
+      sessionPromiseRef.current = null;
+      setIsRecording(false);
+      if(input.trim()) handleSend(); // Send transcribed text if any
+    } else {
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+        
+        let nextStartTime = 0;
+        const sources = new Set<AudioBufferSourceNode>();
+        let currentInputTranscription = '';
+
+        inputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+        outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        sessionPromiseRef.current = ai.live.connect({
+          model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
+            systemInstruction: `তুমি একজন বন্ধুত্বপূর্ণ AI স্কিনকেয়ার সহকারী। তুমি শুধু বাংলায় কথা বলবে।`,
+            inputAudioTranscription: {},
+          },
+          callbacks: {
+            onopen: () => {
+              setIsRecording(true);
+              const source = inputAudioContextRef.current!.createMediaStreamSource(mediaStreamRef.current!);
+              scriptProcessorRef.current = inputAudioContextRef.current!.createScriptProcessor(4096, 1, 1);
+              
+              scriptProcessorRef.current.onaudioprocess = (audioProcessingEvent) => {
+                const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                const l = inputData.length;
+                const int16 = new Int16Array(l);
+                for (let i = 0; i < l; i++) int16[i] = inputData[i] * 32768;
+                const pcmBlob: Blob = { data: encode(new Uint8Array(int16.buffer)), mimeType: 'audio/pcm;rate=16000' };
+                sessionPromiseRef.current?.then((session) => session.sendRealtimeInput({ media: pcmBlob }));
+              };
+              source.connect(scriptProcessorRef.current);
+              scriptProcessorRef.current.connect(inputAudioContextRef.current!.destination);
+            },
+            onmessage: async (message: LiveServerMessage) => {
+              if (message.serverContent?.inputTranscription?.text) {
+                currentInputTranscription += message.serverContent.inputTranscription.text;
+                setInput(currentInputTranscription);
+              }
+              const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+              if (base64Audio) {
+                nextStartTime = Math.max(nextStartTime, outputAudioContextRef.current!.currentTime);
+                const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContextRef.current!, 24000, 1);
+                const sourceNode = outputAudioContextRef.current!.createBufferSource();
+                sourceNode.buffer = audioBuffer;
+                sourceNode.connect(outputAudioContextRef.current!.destination);
+                sourceNode.addEventListener('ended', () => sources.delete(sourceNode));
+                sourceNode.start(nextStartTime);
+                nextStartTime += audioBuffer.duration;
+                sources.add(sourceNode);
+              }
+            },
+            onerror: (e: ErrorEvent) => { console.error('Live session error:', e); setIsRecording(false); },
+            onclose: (e: CloseEvent) => { setIsRecording(false); }
+          }
+        });
+        liveSessionRef.current = await sessionPromiseRef.current;
+      } catch (error) {
+        console.error("Failed to start recording:", error);
+        alert("Could not start recording. Please ensure microphone permissions are granted.");
+      }
+    }
+  }, [isRecording, input, handleSend]);
+
+  return (
+    <div className="flex flex-col h-full bg-pink-100/50 dark:bg-gray-800/50 p-4">
+      <div className="flex-1 overflow-y-auto pr-2">
+        {messages.map((msg, index) => (
+          <MessageBubble key={`${msg.timestamp}-${index}`} msg={msg} />
+        ))}
+        {isLoading && (
+            <div className="flex justify-start mb-4">
+                <div className="max-w-md p-3 rounded-2xl bg-white dark:bg-gray-700 flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse delay-75"></div>
+                    <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse delay-150"></div>
+                    <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse delay-300"></div>
+                </div>
+            </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {image && (
+        <div className="p-2 bg-white dark:bg-gray-700 rounded-lg mb-2 relative">
+          <img src={`data:${image.mimeType};base64,${image.base64}`} alt="Preview" className="h-20 w-20 object-cover rounded-md" />
+          <button onClick={() => setImage(null)} className="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs">&times;</button>
+        </div>
+      )}
+
+      <div className="mt-4 flex items-center bg-white dark:bg-gray-700 rounded-full shadow-lg p-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*"
+          className="hidden"
+        />
+        <button onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-500 dark:text-gray-400 hover:text-pink-500 dark:hover:text-pink-400 transition-colors">
+          <PaperclipIcon className="w-6 h-6" />
+        </button>
+        <button
+          onClick={toggleRecording}
+          className={`p-2 transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:text-pink-500 dark:hover:text-pink-400'}`}
+        >
+          <MicIcon className="w-6 h-6" />
+        </button>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+          placeholder={isRecording ? "শুনছি..." : "আপনার ত্বক সম্পর্কে জিজ্ঞাসা করুন..."}
+          className="flex-1 bg-transparent focus:outline-none px-4 text-gray-800 dark:text-gray-200"
+          disabled={isLoading}
+        />
+        <button
+          onClick={handleSend}
+          disabled={(!input.trim() && !image) || isLoading}
+          className="p-3 bg-pink-500 text-white rounded-full hover:bg-pink-600 disabled:bg-pink-300 dark:disabled:bg-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 dark:focus:ring-offset-gray-700"
+        >
+          {isLoading ? <LoadingSpinner /> : <SendIcon className="w-5 h-5" />}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default SkincareChat;

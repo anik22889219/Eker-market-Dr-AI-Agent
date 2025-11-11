@@ -1,0 +1,7 @@
+{
+  "name": "K-Beauty AI Advisor",
+  "description": "An AI-powered skincare assistant to help users with their Korean beauty routine. Users can chat, upload photos of their skin or products for analysis, get deep skincare advice, and even analyze their skincare routine videos.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
