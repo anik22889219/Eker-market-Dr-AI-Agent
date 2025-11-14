@@ -1,6 +1,6 @@
 {
-  "name": "K-Beauty AI Advisor",
-  "description": "An AI-powered skincare assistant to help users with their Korean beauty routine. Users can chat, upload photos of their skin or products for analysis, get deep skincare advice, and even analyze their skincare routine videos.",
+  "name": "Eker Skincare Advisor",
+  "description": "Your personal AI skincare advisor from Eker Market. Get expert advice on Korean beauty products, analyze your skin from photos, and review your skincare routine with video analysis.",
   "requestFramePermissions": [
     "microphone"
   ]

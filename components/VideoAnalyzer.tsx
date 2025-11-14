@@ -109,10 +109,10 @@ const VideoAnalyzer: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full p-4 bg-purple-50 dark:bg-gray-800/50">
+    <div className="flex flex-col h-full p-4 bg-yellow-50 dark:bg-gray-800/50">
       <div className="text-center mb-6">
-        <VideoIcon className="w-12 h-12 mx-auto text-purple-500" />
-        <h2 className="text-xl font-bold mt-2 text-purple-800 dark:text-purple-300">ভিডিও রুটিন অ্যানালাইজার</h2>
+        <VideoIcon className="w-12 h-12 mx-auto text-green-600" />
+        <h2 className="text-xl font-bold mt-2 text-green-800 dark:text-green-300">ভিডিও রুটিন অ্যানালাইজার</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           বিশেষজ্ঞদের মতামত পেতে আপনার স্কিনকেয়ার রুটিনের একটি ভিডিও আপলোড করুন।
         </p>
@@ -126,7 +126,7 @@ const VideoAnalyzer: React.FC = () => {
             type="file"
             accept="video/*"
             onChange={handleFileChange}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 dark:file:bg-purple-800 dark:file:text-purple-200 dark:hover:file:bg-purple-700"
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200 dark:file:bg-green-800 dark:file:text-green-200 dark:hover:file:bg-green-700"
             disabled={isLoading}
           />
         </div>
@@ -140,7 +140,7 @@ const VideoAnalyzer: React.FC = () => {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="আপনার বিশ্লেষণের জন্য এখানে লিখুন..."
-          className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:outline-none transition"
+          className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:outline-none transition"
           rows={3}
           disabled={isLoading}
         />
@@ -148,7 +148,7 @@ const VideoAnalyzer: React.FC = () => {
         <button
           onClick={handleAnalyze}
           disabled={isLoading || !videoFile}
-          className="w-full flex justify-center items-center px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 disabled:bg-purple-400 dark:disabled:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+          className="w-full flex justify-center items-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 disabled:bg-green-400 dark:disabled:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
         >
           {isLoading ? (
             <>

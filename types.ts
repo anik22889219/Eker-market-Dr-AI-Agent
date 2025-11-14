@@ -6,8 +6,14 @@ export interface ChatMessagePart {
   };
 }
 
+export interface GroundingSource {
+  title: string;
+  uri: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'model';
   parts: ChatMessagePart[];
   timestamp: string;
+  groundingSources?: GroundingSource[];
 }

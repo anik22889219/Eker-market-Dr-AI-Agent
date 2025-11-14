@@ -28,10 +28,10 @@ const DeepAnalysis: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full p-4 bg-blue-50 dark:bg-gray-800/50">
+    <div className="flex flex-col h-full p-4 bg-yellow-50 dark:bg-gray-800/50">
       <div className="text-center mb-6">
-        <BrainCircuitIcon className="w-12 h-12 mx-auto text-blue-500" />
-        <h2 className="text-xl font-bold mt-2 text-blue-800 dark:text-blue-300">গভীর স্কিনকেয়ার বিশ্লেষণ</h2>
+        <BrainCircuitIcon className="w-12 h-12 mx-auto text-green-600" />
+        <h2 className="text-xl font-bold mt-2 text-green-800 dark:text-green-300">গভীর স্কিনকেয়ার বিশ্লেষণ</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           বিশেষজ্ঞ-স্তরের প্রতিক্রিয়ার জন্য জটিল প্রশ্ন জিজ্ঞাসা করুন।
         </p>
@@ -42,13 +42,13 @@ const DeepAnalysis: React.FC = () => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="যেমন, রেটিনয়েড কীভাবে কেরাটিনোসাইট পৃথকীকরণে প্রভাব ফেলে এবং সেলুলার রেটিনোইক অ্যাসিড-বাইন্ডিং প্রোটিন (CRABPs)-এর ভূমিকা কী, তার আণবিক প্রক্রিয়া ব্যাখ্যা করুন..."
-          className="w-full h-40 p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+          className="w-full h-40 p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:outline-none transition"
           disabled={isLoading}
         />
         <button
           onClick={handleAnalyze}
           disabled={isLoading}
-          className="w-full flex justify-center items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 disabled:bg-blue-400 dark:disabled:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+          className="w-full flex justify-center items-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 disabled:bg-green-400 dark:disabled:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
         >
           {isLoading ? (
             <>

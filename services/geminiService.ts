@@ -1,4 +1,4 @@
-import { GoogleGenAI, FunctionDeclaration, Type, Chat, GenerateContentResponse, Part } from "@google/genai";
+import { GoogleGenAI, Chat, GenerateContentResponse, Part, FunctionDeclaration, Type } from "@google/genai";
 
 const API_KEY = process.env.API_KEY;
 
@@ -8,45 +8,136 @@ if (!API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-const SYSTEM_INSTRUCTION_CHAT = `তুমি একজন বন্ধুত্বপূর্ণ এবং জ্ঞানী AI স্কিনকেয়ার সহকারী এবং তোমার মূল কাজ হলো পণ্য বিক্রি করে অর্ডার জেনারেট করা। তুমি শুধু বাংলায় কথা বলবে এবং একজন ডাক্তারের মতো করে ক্লায়েন্টদের সাথে কথা বলবে। ব্যবহারকারীর বার্তার মনস্তত্ত্ব (psychology) বুঝে তাকে পণ্য কিনতে উৎসাহিত করবে। তোমার কাছে থাকা প্রোডাক্ট তালিকা দেখতে এবং অর্ডার তৈরি করার জন্য বিশেষ টুল আছে। যখন কোনো ব্যবহারকারী পণ্যের তালিকা দেখতে চায়, তখন 'getProductList' ফাংশনটি ব্যবহার করবে। যখন ব্যবহারকারী অর্ডার দিতে রাজি হয়, তখন তার নাম, ঠিকানা এবং ফোন নম্বর জিজ্ঞেস করবে এবং 'createOrder' ফাংশনটি ব্যবহার করে অর্ডার তৈরি করবে।`;
-
-const tools: FunctionDeclaration[] = [
+// Mock product database (simulating a Google Sheet)
+const EKER_MARKET_PRODUCTS = [
   {
-    name: 'getProductList',
-    description: 'Get the list of available Korean skincare products from the Google Sheet.',
-    parameters: { type: Type.OBJECT, properties: {} },
+    name: 'COSRX Advanced Snail 96 Mucin Power Essence',
+    brand: 'COSRX',
+    price_bdt: 2799,
+    description: 'ত্বককে গভীরভাবে হাইড্রেট করে, ত্বকের ক্ষত নিরাময় করে এবং একটি স্বাস্থ্যকর আভা দেয়। সব ধরনের ত্বকের জন্য উপযুক্ত।',
+    availability: 'In Stock',
+    reviews: [
+      { user: 'Rina', comment: 'আমার ত্বককে খুব নরম করেছে!', rating: 5 },
+      { user: 'Sumon', comment: 'ব্রণের দাগ কমাতে সাহায্য করেছে।', rating: 4 },
+    ],
   },
   {
-    name: 'createOrder',
-    description: 'Create a new order and add it to the Google Sheet.',
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        productName: { type: Type.STRING, description: 'The name of the product being ordered.' },
-        quantity: { type: Type.INTEGER, description: 'The quantity of the product being ordered.' },
-        customerName: { type: Type.STRING, description: 'The full name of the customer.' },
-        customerAddress: { type: Type.STRING, description: 'The shipping address for the order.' },
-        customerPhone: { type: Type.STRING, description: 'The contact phone number for the customer.' },
+    name: 'Beauty of Joseon Relief Sun: Rice + Probiotics',
+    brand: 'Beauty of Joseon',
+    price_bdt: 1850,
+    description: 'একটি হালকা ওজনের সানস্ক্রিন যা ত্বককে সূর্যের ক্ষতি থেকে রক্ষা করে এবং একই সাথে ত্বককে পুষ্টি জোগায়। কোন সাদা ছাপ ফেলে না।',
+    availability: 'In Stock',
+    reviews: [
+      { user: 'Fatima', comment: 'আমার প্রিয় সানস্ক্রিন! একদমই তেলতেলে না।', rating: 5 },
+    ],
+  },
+  {
+    name: 'ANUA Heartleaf 77% Soothing Toner',
+    brand: 'ANUA',
+    price_bdt: 2300,
+    description: 'সংবেদনশীল ত্বকের জন্য একটি প্রশান্তিদায়ক টোনার। ত্বকের লালচে ভাব এবং জ্বালা কমায়।',
+    availability: 'Out of Stock',
+    reviews: [
+      { user: 'Nadia', comment: 'আমার ত্বকের লালচে ভাব অনেক কমেছে।', rating: 5 },
+      { user: 'Kabir', comment: 'খুবই ভালো একটি টোনার।', rating: 4 },
+    ],
+  },
+  {
+    name: 'Laneige Cream Skin Refiner',
+    brand: 'Laneige',
+    price_bdt: 3200,
+    description: 'টোনার এবং ময়েশ্চারাইজারের একটি অনন্য মিশ্রণ যা ত্বককে দীর্ঘ সময়ের জন্য হাইড্রেটেড রাখে।',
+    availability: 'In Stock',
+    reviews: [
+      { user: 'Ayesha', comment: 'শীতকালের জন্য অসাধারণ!', rating: 5 },
+    ],
+  },
+];
+
+/**
+ * Simulates searching for a product in the Eker Market database.
+ * @param productName The name of the product to search for.
+ * @returns The product details if found, otherwise null.
+ */
+export const findProductInSheet = (productName: string) => {
+  const searchTerm = productName.toLowerCase();
+  const product = EKER_MARKET_PRODUCTS.find(p => p.name.toLowerCase().includes(searchTerm));
+  return product || null;
+};
+
+
+// Function declaration for Gemini
+const findProductFunctionDeclaration: FunctionDeclaration = {
+  name: 'findProduct',
+  description: 'Eker Market এর ডাটাবেস থেকে একটি নির্দিষ্ট স্কিনকেয়ার প্রোডাক্টের বিবরণ, মূল্য, এবং রিভিউ খুঁজে বের করে।',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      productName: {
+        type: Type.STRING,
+        description: 'যে প্রোডাক্টটি খুঁজতে হবে তার নাম (যেমন "COSRX Snail Essence")',
       },
-      required: ['productName', 'quantity', 'customerName', 'customerAddress', 'customerPhone'],
     },
+    required: ['productName'],
   },
-];
+};
 
-export const mockProductList = [
-    { name: "COSRX Low pH Good Morning Gel Cleanser", brand: "COSRX", ml: 150, quantity: 20, price: 850 },
-    { name: "Innisfree Green Tea Seed Serum", brand: "Innisfree", ml: 80, quantity: 15, price: 1800 },
-    { name: "Laneige Water Sleeping Mask", brand: "Laneige", ml: 70, quantity: 10, price: 2200 },
-    { name: "The Face Shop Rice Water Bright Cleansing Foam", brand: "The Face Shop", ml: 150, quantity: 25, price: 700 },
-    { name: "Beauty of Joseon Relief Sun: Rice + Probiotics", brand: "Beauty of Joseon", ml: 50, quantity: 30, price: 1350 },
-];
+const SYSTEM_INSTRUCTION_CHAT = `You are **Sabiha**, an experienced Korean skincare specialist from **Eker Market Korean skincare brand**, a trusted online shop in Bangladesh.
+Your job is to:
+1. Treat every client like a real dermatologist would.
+2. Listen to their problem carefully (text, image, or voice).
+3. Understand their psychology — are they worried, curious, price-sensitive, or problem-focused?
+4. Give the best skincare advice using your deep knowledge of Korean products.
+5. Your main goal is to **generate orders** for Eker Market while maintaining care, trust, and professionalism.
+
+COMMUNICATION STYLE:
+- Always speak in **Bengali** using a warm, doctor-like tone.
+- Use emojis moderately to make it friendly (💚🌸💧).
+- Never sound robotic or pushy; sound helpful, kind, and confident.
+- End each message with a gentle CTA (call to action): “আপনি চাইলে আমি এখনই অর্ডার করতে সাহায্য করতে পারি 💚”
+
+---
+
+### 🌿 TEXT INPUT LOGIC:
+If the user writes about a problem (e.g. dark spot, acne, dry skin, dull skin):
+1. Identify the core skin concern.
+2. Recommend a specific Korean skincare product effective for the issue. If a suitable product exists in the EKER_MARKET_PRODUCTS list, prioritize recommending it and include its price.
+3. Explain its benefits briefly (2–3 lines).
+4. End with the order offer CTA.
+
+### 🖼️ IMAGE INPUT LOGIC:
+If an image is provided, first determine if it's a person's face or a product.
+
+- **SKIN PHOTO ANALYSIS:** If it’s a face photo, act as a caring dermatologist. Gently mention the visible concern you can identify (e.g., acne, dryness, dark spots). Then, you **must** recommend one specific, relevant product from the EKER_MARKET_PRODUCTS database. Your response must include the product's name, its specific benefit for the identified concern, and its price in BDT.
+  - Example for acne: "প্রিয়, আমি ছবিতে কিছু ব্রণের চিহ্ন দেখতে পাচ্ছি। চিন্তার কিছু নেই 💚। এর জন্য Eker Market-এ থাকা **ANUA Heartleaf 77% Soothing Toner** আপনার জন্য খুব ভালো হবে। এটি ত্বকের লালচে ভাব এবং জ্বালা কমায়। এর দাম এখন ২৩০০৳। আপনি চাইলে আমি এখনই অর্ডার করতে সাহায্য করতে পারি 💚"
+
+- **PRODUCT PHOTO ANALYSIS:** If it’s a product image, use the \`findProduct\` tool to identify it in the Eker Market database.
+  - If found, present the details clearly in Bengali: product name, price, a short description, and its availability.
+  - If not found in the database, use Google Search to identify the product, discuss its general benefits, and then mention that the user can inquire about its availability at Eker Market.
+
+### 🎤 VOICE INPUT LOGIC:
+Process the transcribed text as a normal text query.
+
+### 📦 PRODUCT SEARCH LOGIC:
+- If a user asks about a specific product, use the \`findProduct\` tool to search for it in the Eker Market database.
+- If the product is found, present the details clearly in Bengali: product name, price, a short description, and a summary of reviews. Mention its availability.
+- If the product is not found, politely inform the user that it's not currently in the database but you can search for information about it online using your Google Search tool.
+
+---
+
+### 🧾 ADDITIONAL RULES:
+- Mention “Eker Market” in every product suggestion.
+- Keep responses short (3–5 sentences max).
+- Never give medical advice or prescriptions.
+- If a user agrees to order, ask for their name, address, and phone number to finalize it.
+`;
 
 export const startChat = (): Chat => {
   return ai.chats.create({
     model: 'gemini-2.5-flash',
     config: {
       systemInstruction: SYSTEM_INSTRUCTION_CHAT,
-      tools: [{ functionDeclarations: tools }],
+      tools: [{ googleSearch: {} }, { functionDeclarations: [findProductFunctionDeclaration] }],
     },
   });
 };

@@ -1,9 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChatMessage } from '../types';
+import { ChatMessage, GroundingSource } from '../types';
 import { fileToBase64 } from '../utils/fileUtils';
-import { startChat, mockProductList } from '../services/geminiService';
+import { startChat, findProductInSheet } from '../services/geminiService';
 import { MicIcon, PaperclipIcon, SendIcon, LoadingSpinner } from './Icons';
-import { GoogleGenAI, LiveSession, LiveServerMessage, Modality, Blob, Chat, GenerateContentResponse } from '@google/genai';
+// FIX: The `LiveSession` type is not exported from the `@google/genai` package.
+// Defining a local interface for the live session object to ensure type safety.
+import { GoogleGenAI, LiveServerMessage, Modality, Blob, Chat, GenerateContentResponse, Part } from '@google/genai';
+
+interface LiveSession {
+  sendRealtimeInput(input: { media: Blob }): void;
+  close(): void;
+}
 
 // Base64 and Audio Decoding/Encoding functions required for Live API
 const decode = (base64: string) => {
@@ -44,13 +51,11 @@ async function decodeAudioData(
   return buffer;
 }
 
-// FIX: Explicitly type MessageBubble as a React Functional Component (React.FC)
-// This ensures TypeScript correctly handles React-specific props like `key` during list rendering.
 const MessageBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
   const isUser = msg.role === 'user';
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className={`max-w-md p-3 rounded-2xl ${isUser ? 'bg-pink-500 text-white' : 'bg-white dark:bg-gray-700'}`}>
+      <div className={`max-w-md p-3 rounded-2xl ${isUser ? 'bg-green-600 text-white' : 'bg-white dark:bg-gray-700'}`}>
         {msg.parts.map((part, index) => (
           <div key={index}>
             {part.text && <p className="text-sm" dangerouslySetInnerHTML={{ __html: part.text.replace(/\n/g, '<br />')}}></p>}
@@ -63,6 +68,27 @@ const MessageBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
             )}
           </div>
         ))}
+        {msg.groundingSources && msg.groundingSources.length > 0 && !isUser && (
+            <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Sources:</h4>
+                <ul className="space-y-1 text-xs">
+                    {msg.groundingSources.map((source, index) => (
+                        <li key={index} className="truncate">
+                            <a
+                                href={source.uri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline dark:text-blue-400 flex items-center gap-1"
+                                title={source.title}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+                                {source.title || new URL(source.uri).hostname}
+                            </a>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        )}
         <span className="text-xs opacity-70 block text-right mt-1">{msg.timestamp}</span>
       </div>
     </div>
@@ -112,7 +138,14 @@ const SkincareChat: React.FC = () => {
       parts: [],
       timestamp: new Date().toLocaleTimeString(),
     };
-    if (input.trim()) userMessage.parts.push({ text: input });
+    
+    let promptText = input.trim();
+    // If an image is uploaded without any text, add a default prompt for skin analysis.
+    if (image && !promptText) {
+      promptText = "আমার ত্বকের এই ছবিটি বিশ্লেষণ করুন এবং উপযুক্ত পণ্যের পরামর্শ দিন।";
+    }
+
+    if (promptText) userMessage.parts.push({ text: promptText });
     if (image) userMessage.parts.push({ image: { base64: image.base64, mimeType: image.mimeType } });
 
     setMessages((prev) => [...prev, userMessage]);
@@ -121,43 +154,66 @@ const SkincareChat: React.FC = () => {
     setImage(null);
 
     try {
-      let response: GenerateContentResponse = await chat.sendMessage({ parts: userMessage.parts });
+      const messageForApi: Part[] = userMessage.parts.map((part) => {
+        if (part.image) {
+          return {
+            inlineData: {
+              data: part.image.base64,
+              mimeType: part.image.mimeType,
+            },
+          };
+        }
+        return { text: part.text! };
+      });
 
+      let response: GenerateContentResponse = await chat.sendMessage({
+        message: messageForApi,
+      });
+
+      // Handle function calling
       while (response.functionCalls && response.functionCalls.length > 0) {
-        const functionCalls = response.functionCalls;
-        const toolResponses = [];
-
-        for (const fc of functionCalls) {
-          if (fc.name === 'getProductList') {
-             setMessages((prev) => [...prev, { role: 'model', parts: [{ text: "একটু অপেক্ষা করুন, আমি পণ্যের তালিকা দেখছি..." }], timestamp: new Date().toLocaleTimeString() }]);
-            toolResponses.push({
-               id: fc.id,
-               name: fc.name,
-               response: { result: JSON.stringify(mockProductList) }
-            });
-          } else if (fc.name === 'createOrder') {
-            const orderArgs = fc.args;
-            console.log("Order Created:", orderArgs);
-             setMessages((prev) => [...prev, { role: 'model', parts: [{ text: `আপনার অর্ডারটি তৈরি করা হচ্ছে...` }], timestamp: new Date().toLocaleTimeString() }]);
-            toolResponses.push({
-                id: fc.id,
-                name: fc.name,
-                response: { result: "Order created successfully. Confirmation ID: 12345" }
+        const toolResponseParts: Part[] = [];
+        
+        for (const functionCall of response.functionCalls) {
+          if (functionCall.name === 'findProduct') {
+            const productName = functionCall.args.productName as string;
+            // Simulate calling the tool/function
+            const productDetails = findProductInSheet(productName);
+            
+            toolResponseParts.push({
+              functionResponse: {
+                name: 'findProduct',
+                response: productDetails || { error: 'Product not found in database.' },
+              },
             });
           }
         }
         
-        const subsequentResponse = await chat.sendMessage({ toolResponses: { functionResponses: toolResponses } });
-        response = subsequentResponse;
+        // Send the tool response back to the model
+        response = await chat.sendMessage({ message: toolResponseParts });
       }
       
       const responseText = response.text;
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      let sources: GroundingSource[] = [];
+
+      if (groundingChunks) {
+          sources = groundingChunks
+              .filter(chunk => chunk.web && chunk.web.uri)
+              .map(chunk => ({
+                  title: chunk.web.title,
+                  uri: chunk.web.uri
+              }));
+      }
+
       const modelMessage: ChatMessage = {
         role: 'model',
         parts: [{ text: responseText }],
         timestamp: new Date().toLocaleTimeString(),
+        groundingSources: sources.length > 0 ? sources : undefined,
       };
       setMessages((prev) => [...prev, modelMessage]);
+
     } catch (error) {
       console.error('Error generating response:', error);
       const errorMessage: ChatMessage = {
@@ -252,7 +308,7 @@ const SkincareChat: React.FC = () => {
   }, [isRecording, input, handleSend]);
 
   return (
-    <div className="flex flex-col h-full bg-pink-100/50 dark:bg-gray-800/50 p-4">
+    <div className="flex flex-col h-full bg-yellow-100/50 dark:bg-gray-800/50 p-4">
       <div className="flex-1 overflow-y-auto pr-2">
         {messages.map((msg, index) => (
           <MessageBubble key={`${msg.timestamp}-${index}`} msg={msg} />
@@ -260,9 +316,9 @@ const SkincareChat: React.FC = () => {
         {isLoading && (
             <div className="flex justify-start mb-4">
                 <div className="max-w-md p-3 rounded-2xl bg-white dark:bg-gray-700 flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse delay-75"></div>
-                    <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse delay-150"></div>
-                    <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse delay-300"></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-75"></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-150"></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-300"></div>
                 </div>
             </div>
         )}
@@ -284,12 +340,12 @@ const SkincareChat: React.FC = () => {
           accept="image/*"
           className="hidden"
         />
-        <button onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-500 dark:text-gray-400 hover:text-pink-500 dark:hover:text-pink-400 transition-colors">
+        <button onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors">
           <PaperclipIcon className="w-6 h-6" />
         </button>
         <button
           onClick={toggleRecording}
-          className={`p-2 transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:text-pink-500 dark:hover:text-pink-400'}`}
+          className={`p-2 transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400'}`}
         >
           <MicIcon className="w-6 h-6" />
         </button>
@@ -305,7 +361,7 @@ const SkincareChat: React.FC = () => {
         <button
           onClick={handleSend}
           disabled={(!input.trim() && !image) || isLoading}
-          className="p-3 bg-pink-500 text-white rounded-full hover:bg-pink-600 disabled:bg-pink-300 dark:disabled:bg-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 dark:focus:ring-offset-gray-700"
+          className="p-3 bg-green-600 text-white rounded-full hover:bg-green-700 disabled:bg-green-400 dark:disabled:bg-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-700"
         >
           {isLoading ? <LoadingSpinner /> : <SendIcon className="w-5 h-5" />}
         </button>

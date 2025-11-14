@@ -6,6 +6,31 @@ import { BotIcon, BrainCircuitIcon, VideoIcon } from './components/Icons';
 
 type Mode = 'chat' | 'deep_analysis' | 'video_analysis';
 
+const EKER_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGgAAP+lSURBVHhe7J0FnB1Vt+b/5yZpvUkaDQm9N0gISQgBCSGEEGigoBAQEBUFRUWwsCIiAqgoKPbAsoKKIoiIgKAgiB7SIQi9EUi9SYKk95JkMvn7M/eee++9e1tCEhK++fm4b9/M/GbmzJyZ+c18M2fOjBghQoQIQVdK+f3//3+ysLCwV3UJEZ8bLVq0sE6dOhzOnDnT0uX81KlTxbt27eL+/fsVXV1d1apVfX39YmJi1qxZs2bNmjVz5syZM2eamZlZWlpaWlpaWlpa+vDhg9+vWbPmsWPH6urqcnJycnJyKisrq6urY8eOJSUlJSYmJiYmZmRkZGdnZ2VlZWdnx8bGxsbG5ubm5ubmpqamtra2pqampaWlpaWl5eXl5eXllZWVlZWVlZWVtbW1tbW1ubm5ubm5ublZWVkZGRkZGRkZGRkZGRnZ2dnx8fHx8fHx8fFxcnJycnJycnJycXFxcnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnouborp...AASUVORK5CYII=";
+
+// FIX: Moved NavButton outside of App component to avoid re-creation on every render.
+// This is a React best practice that improves performance and prevents potential bugs.
+const NavButton = ({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex-1 flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800 ${
+      active
+        ? 'bg-green-600 text-white shadow-md'
+        : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+    }`}
+  >
+    {children}
+  </button>
+);
+
 const App: React.FC = () => {
   const [mode, setMode] = useState<Mode>('chat');
 
@@ -22,37 +47,11 @@ const App: React.FC = () => {
     }
   }, [mode]);
 
-  const NavButton = ({
-    active,
-    onClick,
-    children,
-  }: {
-    active: boolean;
-    onClick: () => void;
-    children: React.ReactNode;
-  }) => (
-    <button
-      onClick={onClick}
-      className={`flex-1 flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-400 dark:focus:ring-offset-gray-800 ${
-        active
-          ? 'bg-pink-500 text-white shadow-md'
-          : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-      }`}
-    >
-      {children}
-    </button>
-  );
-
   return (
-    <div className="flex flex-col h-screen font-sans bg-pink-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100">
-      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-md p-4 border-b border-pink-200 dark:border-gray-700">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-center text-pink-600 dark:text-pink-400">
-            K-Beauty AI Advisor
-          </h1>
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Your personal AI expert for Korean skincare.
-          </p>
+    <div className="flex flex-col h-screen font-sans bg-yellow-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100">
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-md p-2 border-b border-green-200 dark:border-gray-700">
+        <div className="max-w-4xl mx-auto flex justify-center items-center">
+            <img src={EKER_LOGO_BASE64} alt="Eker Skincare Logo" className="h-16" />
         </div>
       </header>
       
@@ -62,7 +61,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-3 border-t border-pink-200 dark:border-gray-700">
+      <footer className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-3 border-t border-green-200 dark:border-gray-700">
         <div className="max-w-md mx-auto flex items-center justify-around gap-2">
           <NavButton active={mode === 'chat'} onClick={() => setMode('chat')}>
             <BotIcon className="w-5 h-5 mr-2" />
