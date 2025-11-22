@@ -3,6 +3,7 @@ import { ChatMessage, GroundingSource } from '../types';
 import { fileToBase64 } from '../utils/fileUtils';
 import { startChat, findProductInSheet } from '../services/geminiService';
 import { MicIcon, PaperclipIcon, SendIcon, LoadingSpinner } from './Icons';
+import { Feedback } from './Feedback';
 // FIX: The `LiveSession` type is not exported from the `@google/genai` package.
 // Defining a local interface for the live session object to ensure type safety.
 import { GoogleGenAI, LiveServerMessage, Modality, Blob, Chat, GenerateContentResponse, Part } from '@google/genai';
@@ -89,6 +90,7 @@ const MessageBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
                 </ul>
             </div>
         )}
+        {!isUser && <Feedback />}
         <span className="text-xs opacity-70 block text-right mt-1">{msg.timestamp}</span>
       </div>
     </div>

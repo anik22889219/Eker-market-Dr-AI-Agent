@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { analyzeVideo } from '../services/geminiService';
 import { fileToBase64 } from '../utils/fileUtils';
 import { VideoIcon } from './Icons';
+import { Feedback } from './Feedback';
 
 const MAX_FRAMES = 16;
 const FRAME_CAPTURE_INTERVAL_MS = 500; // Capture a frame every 0.5 seconds
@@ -165,10 +166,13 @@ const VideoAnalyzer: React.FC = () => {
 
       <div className="flex-1 mt-4 overflow-y-auto bg-white dark:bg-gray-700 rounded-lg shadow-inner p-4 border border-gray-200 dark:border-gray-600">
         {response ? (
-          <div
-            className="prose dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: response.replace(/\n/g, '<br />') }}
-          />
+          <>
+            <div
+              className="prose dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: response.replace(/\n/g, '<br />') }}
+            />
+            <Feedback />
+          </>
         ) : (
           <div className="text-center text-gray-500 dark:text-gray-400">
             আপনার ভিডিও বিশ্লেষণ এখানে প্রদর্শিত হবে।

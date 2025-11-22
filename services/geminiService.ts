@@ -154,7 +154,7 @@ export const deepAnalyze = async (prompt: string): Promise<string> => {
     }
   });
 
-  return response.text;
+  return response.text || '';
 };
 
 const SYSTEM_INSTRUCTION_VIDEO_ANALYSIS = `তুমি একজন ভিডিও বিশ্লেষণকারী AI। ভিডিও থেকে নেওয়া নিম্নলিখিত চিত্র ফ্রেমগুলির ক্রম বিশ্লেষণ করবে এবং ভিজ্যুয়াল তথ্যের উপর ভিত্তি করে ব্যবহারকারীর প্রশ্নের উত্তর দেবে। উত্তর অবশ্যই বাংলায় হবে।`;
@@ -182,5 +182,31 @@ export const analyzeVideo = async (prompt: string, frames: string[]): Promise<st
         }
     });
 
-    return response.text;
+    return response.text || '';
+};
+
+const SYSTEM_INSTRUCTION_AUDIO = `তুমি একজন সহকারী যে অডিও ফাইল ট্রান্সক্রাইব করে। 
+১. প্রদত্ত অডিও ফাইলটি হুবহু বাংলায় লিখবে (Transcription)।
+২. যদি অডিওটি স্কিনকেয়ার সম্পর্কিত হয়, তবে মূল পয়েন্টগুলো বুলেট পয়েন্টে সারাংশ (Summary) করবে।
+৩. যদি স্কিনকেয়ার সম্পর্কিত না হয়, শুধু ট্রান্সক্রিপশন দেবে।`;
+
+export const transcribeAudio = async (base64Data: string, mimeType: string): Promise<string> => {
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: {
+            parts: [
+                {
+                    inlineData: {
+                        data: base64Data,
+                        mimeType: mimeType
+                    }
+                },
+                { text: "এই অডিও রেকর্ডিংটি ট্রান্সক্রাইব করুন এবং মূল বিষয়গুলো সংক্ষেপে লিখুন।" }
+            ]
+        },
+        config: {
+            systemInstruction: SYSTEM_INSTRUCTION_AUDIO
+        }
+    });
+    return response.text || '';
 };

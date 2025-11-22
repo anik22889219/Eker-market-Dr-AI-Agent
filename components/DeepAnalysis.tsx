@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { deepAnalyze } from '../services/geminiService';
 import { BrainCircuitIcon } from './Icons';
+import { Feedback } from './Feedback';
 
 const DeepAnalysis: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -65,10 +66,13 @@ const DeepAnalysis: React.FC = () => {
 
       <div className="flex-1 mt-4 overflow-y-auto bg-white dark:bg-gray-700 rounded-lg shadow-inner p-4 border border-gray-200 dark:border-gray-600">
         {response ? (
-          <div
-            className="prose dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: response.replace(/\n/g, '<br />') }}
-          />
+          <>
+            <div
+              className="prose dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: response.replace(/\n/g, '<br />') }}
+            />
+            <Feedback />
+          </>
         ) : (
           <div className="text-center text-gray-500 dark:text-gray-400">
             আপনার বিস্তারিত বিশ্লেষণ এখানে প্রদর্শিত হবে।

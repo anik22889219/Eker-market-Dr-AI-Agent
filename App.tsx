@@ -2,11 +2,12 @@ import React, { useState, useCallback } from 'react';
 import SkincareChat from './components/SkincareChat';
 import DeepAnalysis from './components/DeepAnalysis';
 import VideoAnalyzer from './components/VideoAnalyzer';
-import { BotIcon, BrainCircuitIcon, VideoIcon } from './components/Icons';
+import AudioTranscriber from './components/AudioTranscriber';
+import { BotIcon, BrainCircuitIcon, VideoIcon, FileAudioIcon } from './components/Icons';
 
-type Mode = 'chat' | 'deep_analysis' | 'video_analysis';
+type Mode = 'chat' | 'deep_analysis' | 'video_analysis' | 'audio_analysis';
 
-const EKER_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGgAAP+lSURBVHhe7J0FnB1Vt+b/5yZpvUkaDQm9N0gISQgBCSGEEGigoBAQEBUFRUWwsCIiAqgoKPbAsoKKIoiIgKAgiB7SIQi9EUi9SYKk95JkMvn7M/eee++9e1tCEhK++fm4b9/M/GbmzJyZ+c18M2fOjBghQoQIQVdK+f3//3+ysLCwV3UJEZ8bLVq0sE6dOhzOnDnT0uX81KlTxbt27eL+/fsVXV1d1apVfX39YmJi1qxZs2bNmjVz5syZM2eamZlZWlpaWlpaWlpa+vDhg9+vWbPmsWPH6urqcnJycnJyKisrq6urY8eOJSUlJSYmJiYmZmRkZGdnZ2VlZWdnx8bGxsbG5ubm5ubmpqamtra2pqampaWlpaWl5eXl5eXllZWVlZWVlZWVtbW1tbW1ubm5ubm5ublZWVkZGRkZGRkZGRkZGRnZ2dnx8fHx8fHx8fFxcnJycnJycnJycXFxcnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnouborp...AASUVORK5CYII=";
+const EKER_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGgAAP+lSURBVHhe7J0FnB1Vt+b/5yZpvUkaDQm9N0gISQgBCSGEEGigoBAQEBUFRUWwsCIiAqgoKPbAsoKKIoiIgKAgiB7SIQi9EUi9SYKk95JkMvn7M/eee++9e1tCEhK++fm4b9/M/GbmzJyZ+c18M2fOjBghQoQIQVdK+f3//3+ysLCwV3UJEZ8bLVq0sE6dOhzOnDnT0uX81KlTxbt27eL+/fsVXV1d1apVfX39YmJi1qxZs2bNmjVz5syZM2eamZlZWlpaWlpaWlpa+vDhg9+vWbPmsWPH6urqcnJycnJyKisrq6urY8eOJSUlJSYmJiYmZmRkZGdnZ2VlZWdnx8bGxsbG5ubm5ubmpqamtra2pqampaWlpaWl5eXl5eXllZWVlZWVlZWVtbW1tbW1ubm5ubm5ublZWVkZGRkZGRkZGRkZGRnZ2dnx8fHx8fHx8fHx8fFxcnJycnJycnJycXFxcnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnouborp...AASUVORK5CYII=";
 
 // FIX: Moved NavButton outside of App component to avoid re-creation on every render.
 // This is a React best practice that improves performance and prevents potential bugs.
@@ -21,7 +22,7 @@ const NavButton = ({
 }) => (
   <button
     onClick={onClick}
-    className={`flex-1 flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800 ${
+    className={`flex-1 flex flex-col items-center justify-center px-2 py-2 text-xs font-medium rounded-lg transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800 ${
       active
         ? 'bg-green-600 text-white shadow-md'
         : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
@@ -42,6 +43,8 @@ const App: React.FC = () => {
         return <DeepAnalysis />;
       case 'video_analysis':
         return <VideoAnalyzer />;
+      case 'audio_analysis':
+        return <AudioTranscriber />;
       default:
         return <SkincareChat />;
     }
@@ -61,19 +64,23 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-3 border-t border-green-200 dark:border-gray-700">
-        <div className="max-w-md mx-auto flex items-center justify-around gap-2">
+      <footer className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-2 border-t border-green-200 dark:border-gray-700">
+        <div className="max-w-md mx-auto flex items-center justify-around gap-1">
           <NavButton active={mode === 'chat'} onClick={() => setMode('chat')}>
-            <BotIcon className="w-5 h-5 mr-2" />
+            <BotIcon className="w-5 h-5 mb-1" />
             Chat
           </NavButton>
           <NavButton active={mode === 'deep_analysis'} onClick={() => setMode('deep_analysis')}>
-            <BrainCircuitIcon className="w-5 h-5 mr-2" />
+            <BrainCircuitIcon className="w-5 h-5 mb-1" />
             Deep Analysis
           </NavButton>
           <NavButton active={mode === 'video_analysis'} onClick={() => setMode('video_analysis')}>
-            <VideoIcon className="w-5 h-5 mr-2" />
-            Video Review
+            <VideoIcon className="w-5 h-5 mb-1" />
+            Video
+          </NavButton>
+          <NavButton active={mode === 'audio_analysis'} onClick={() => setMode('audio_analysis')}>
+            <FileAudioIcon className="w-5 h-5 mb-1" />
+            Audio
           </NavButton>
         </div>
       </footer>
